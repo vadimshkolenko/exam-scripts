@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { AddUserForm } from './forms/AddUserForm'
-import { UserTable } from './tables/UserTable'
-import { EditUserForm } from './forms/EditUserForm'
+import { AddNoteForm } from './forms/AddNoteForm'
+import { NoteTable } from './tables/NoteTable'
+import { EditNoteForm } from './forms/EditNoteForm'
 import './App.css'
 import { Route, NavLink } from 'react-router-dom';
 import './firebaseConfig/firebaseConfig'
@@ -10,15 +10,16 @@ import * as firebase from 'firebase'
 const App = () => {
     const db = firebase.firestore()
 
-    const [users, setUsers] = useState([])
+    const [notes, setNotes] = useState([])
 
     useEffect(() => {
-        db.collection("usersData").onSnapshot(snapshot => {
-            const usersData = snapshot.docs.map(doc => ({
+        db.collection("notesData").onSnapshot(snapshot => {
+            const notesData = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }))
-            setUsers(usersData)
+            setNotes(notesData)
+            console.log(notesData)
         })
     }, [])
 
@@ -27,26 +28,27 @@ const App = () => {
 
     // начальное значение для формы редактирования
     // так как мы не знаем, кто редактируется - пустые поля
-    const initialFormState = { id: null, name: '', surname: '', phone: '', emails: '', role: '' }
+    const initialFormState = { id: null, text: '', dateCreate: '', dateEnd: '' }
     // значение "текущий пользователь на редактировании" + функция установки этого значения
-    const [currentUser, setCurrentUser] = useState(initialFormState)
+    const [currentNote, setCurrentNote] = useState(initialFormState)
 
-    const addUser = user => {
+    const addNote = note => {
 
-        if (users.length > 0) {
-            user.id = users[users.length - 1].id + 1
-        } else user.id = 1
+        if (notes.length > 0) {
+            note.id = notes[notes.length - 1].id + 1
+        } else note.id = 1
         // вызываем setUsers определенную выше в хуке useState
         // передаем туда все, что было в users + новый элемент user
-        setUsers([...users, user])
-        // debugger
-        db.collection("usersData").doc(`${user.id}`).set({
-            id: user.id,
-            name: user.name,
-            surname: user.surname,
-            phone: user.phone,
-            role: user.role,
-            emails: user.emails
+        // setNotes([...notes, note]) лишний код
+
+        let now = new Date()
+        note.dateCreate = `${now.getFullYear()}-${now.getMonth() + 1 < 10 ? '0' + (now.getMonth() + 1): now.getMonth() + 1}-${now.getDate() < 10 ? '0' + now.getDate() : now.getDate()}`
+
+        db.collection("notesData").doc(`${note.id}`).set({
+            id: note.id,
+            text: note.text,
+            dateCreate: note.dateCreate,
+            dateEnd: note.dateEnd
         })
     }
 
@@ -54,74 +56,55 @@ const App = () => {
     // в очередной раз вызываем setUsers [1]
     // и передаем в setUsers массив без элемента, который нужно удалить
 
-    const deleteUser = id => {
+    const deleteNote = id => {
         setEditing(false)
-        setUsers(users.filter(user => user.id !== id))
-        db.collection("usersData").doc(`${id}`).delete()
+        setNotes(notes.filter(note => note.id !== id))
+        db.collection("notesData").doc(`${id}`).delete()
     }
 
     // обновление пользователя
-    const updateUser = (id, updatedUser) => {
+    const updateNote = (id, updatedNote) => {
         // когда мы готовы обновить пользователя, ставим флажок editing в false
         setEditing(false)
         // и обновляем пользователя, если нашли его по id
-        setUsers(users.map(user => (user.id === id ? updatedUser : user)))
-        db.collection("usersData").doc(`${id}`).update({
-            id: updatedUser.id,
-            name: updatedUser.name,
-            surname: updatedUser.surname,
-            phone: updatedUser.phone,
-            role: updatedUser.role,
-            emails: updatedUser.emails
+        setNotes(notes.map(note => (note.id === id ? updatedNote : note)))
+        db.collection("notesData").doc(`${id}`).update({
+            id: updatedNote.id,
+            text: updatedNote.text,
+            dateCreate: updatedNote.dateCreate,
+            dateEnd: updatedNote.dateEnd
         })
     }
 
     // редактирование пользователя
-    const editRow = user => {
+    const editRow = note => {
         // готовы редактировать - флажок в true
         setEditing(true)
         // устанавливаем значения полей для формы редактирования
         // на основании выбранного "юзера"
-        setCurrentUser({ id: user.id, name: user.name, surname: user.surname, phone: user.phone, role: user.role, emails: user.emails })
+        setCurrentNote({ id: note.id, text: note.text, dateCreate: note.dateCreate, dateEnd: note.dateEnd })
     }
 
     return (
         <div>
             <header>
-                <NavLink exact to="/" activeClassName="activeLink">Персонал</NavLink>
-                <NavLink to="/add-personal" activeClassName="activeLink">Добавить персонал</NavLink>
+                <NavLink exact to="/" activeClassName="activeLink">Мои заметки</NavLink>
+                <NavLink to="/add-note" activeClassName="activeLink">Создать &#9998;</NavLink>
             </header>
-            <Route path="/add-personal" render={() =>
-                <AddUserForm addUser={addUser} />}
+            <Route path="/add-note" render={() =>
+                <AddNoteForm addNote={addNote} />}
             />
-            <Route exact path="/edit-personal" render={() =>
-                <EditUserForm
+            <Route exact path="/edit-note" render={() =>
+                <EditNoteForm
                                 editing={editing}
                                 setEditing={setEditing}
-                                currentUser={currentUser}
-                                updateUser={updateUser}
+                                currentNote={currentNote}
+                                updateNote={updateNote}
                 />}
             />
             <Route exact path="/" render={() =>
-                <UserTable users={users} deleteUser={deleteUser} editRow={editRow} />}
+                <NoteTable notes={notes} deleteNote={deleteNote} editRow={editRow} />}
             />
-
-            {/* {editing ? (
-                        <div>
-                            <h2>Редактирование</h2>
-                            <EditUserForm
-                                editing={editing}
-                                setEditing={setEditing}
-                                currentUser={currentUser}
-                                updateUser={updateUser}
-                            />
-                        </div>
-                    ) : (
-                            <div>
-                                <h2>Добавление персонала</h2>
-                                <AddUserForm addUser={addUser} />
-                            </div>
-                        )} */}
         </div>
     )
 }

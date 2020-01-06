@@ -316,6 +316,10 @@ td {
     border-bottom: 1px solid #dedede;
 }
 
+table td:first-child{
+    width: 50%;
+}
+
 th,
 td {
     text-align: left;
@@ -332,6 +336,6 @@ caption {
     background-color: #f8f8f8;
 }
 
-.contain-table {
+/* .contain-table {
     overflow-x: auto;
-}
+} */
