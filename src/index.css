@@ -308,6 +308,11 @@ thead th {
     border-bottom: 2px solid #dedede;
 }
 
+thead th:not(:first-child) {
+    cursor: pointer;
+    user-select: none;
+}
+
 tfoot th {
     border-top: 2px solid #dedede;
 }
@@ -339,3 +344,8 @@ caption {
 /* .contain-table {
     overflow-x: auto;
 } */
+
+#search {
+    width: 40%;
+    margin: 15px auto;
+}

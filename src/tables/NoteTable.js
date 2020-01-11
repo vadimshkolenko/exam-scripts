@@ -1,5 +1,6 @@
-import React from 'react'
+import React, {useState, useEffect} from 'react'
 import { NavLink } from 'react-router-dom';
+import Fuse from 'fuse.js'
 
 const NoteTable = props => {
 
@@ -21,44 +22,84 @@ const NoteTable = props => {
         }
     }
 
+    // Поиск
+
+    const [searchString, setSearchString] = useState('')
+    const [filteredTable, setFilteredTable] = useState(props.notes)
+
+    const onChangeSearch = e => {
+        const {value} = e.target
+        setSearchString(value)
+    }
+
+    const filterTable = (table, filter) => {
+        if (!filter) return table
+    
+        const searchOptions = {
+            shouldSort: true,
+            threshold: 0.6,
+            location: 0,
+            distance: 100,
+            maxPatternLength: 0,
+            minMatchCharLength: 1,
+            keys: ['text']
+        }
+    
+        const fuse = new Fuse(table, searchOptions)
+        const result = fuse.search(filter)
+    
+        return result
+    }
+
+    useEffect(() => {
+        setFilteredTable(filterTable(props.notes, searchString))
+    }, [searchString, props.notes])
+
     return (
-        <table>
-            <thead>
-                <tr>
-                    <th>Текст</th>
-                    <th>Дата создания</th>
-                    <th>Дата завершения</th>
-                    <th colSpan={1}></th>
-                </tr>
-            </thead>
-            <tbody>
-                {props.notes.length > 0 ? (
-                    props.notes.map(note => (
-                        <tr key={note.id} style={finishedNote(note.dateEnd)}>
-                            <td>{note.text}</td>
-                            <td>{note.dateCreate}</td>
-                            <td>{note.dateEnd}</td>
-                            <td>
-                                <NavLink to="/edit-note">
+        <div>
+            <input type="text" value={searchString} onChange={onChangeSearch} id="search" placeholder="Поиск..."/>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Текст</th>
+                        <th onClick={() => props.onSort('dateCreate')}>
+                            Дата создания {props.sortField === 'dateCreate' ? (props.sort === 'asc' ? <small>&uarr;</small> : <small>&darr;</small>) : null}
+                        </th>
+                        <th onClick={() => props.onSort('dateEnd')}>
+                            Дата завершения {props.sortField === 'dateEnd' ? (props.sort === 'asc' ? <small>&uarr;</small> : <small>&darr;</small>) : null}
+                        </th>
+                        <th colSpan={1}></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {filteredTable.length > 0 ? (
+                        filteredTable.map(note => ( //???
+                            <tr key={note.id} style={finishedNote(note.dateEnd)}>
+                                <td>{note.text}</td>
+                                <td>{note.dateCreate}</td>
+                                <td>{note.dateEnd}</td>
+                                <td>
+                                    <NavLink to="/edit-note">
+                                        <button
+                                            className="button muted-button"
+                                            onClick={() => props.editRow(note)}
+                                        >&#9998;</button>
+                                    </NavLink>
                                     <button
                                         className="button muted-button"
-                                        onClick={() => props.editRow(note)}
-                                    >&#9998;</button>
-                                </NavLink>
-                                <button
-                                    className="button muted-button"
-                                    onClick={() => handleDeleteNote(note.id)}
-                                >&#10005;</button>
-                            </td>
-                        </tr>
-                    ))
-                ) : (
-                        <tr>
-                            <td colSpan={4}>No notes</td>
-                        </tr>
-                    )}
-            </tbody>
-        </table>
+                                        onClick={() => handleDeleteNote(note.id)}
+                                    >&#10005;</button>
+                                </td>
+                            </tr>
+                        ))
+                    ) : (
+                            <tr>
+                                <td colSpan={4}>Нет записей</td>
+                            </tr>
+                        )}
+                </tbody>
+            </table>
+        </div>
     )
 
 }

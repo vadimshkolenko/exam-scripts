@@ -6,6 +6,7 @@ import './App.css'
 import { Route, NavLink } from 'react-router-dom';
 import './firebaseConfig/firebaseConfig'
 import * as firebase from 'firebase'
+import _ from 'lodash'
 
 const App = () => {
     const db = firebase.firestore()
@@ -18,18 +19,15 @@ const App = () => {
                 id: doc.id,
                 ...doc.data()
             }))
-            setNotes(notesData)
+            // setNotes(notesData)
+            setNotes(_.orderBy(notesData, sortConfig.sortField, 'asc'))
             console.log(notesData)
         })
     }, [])
 
-    // флаг editing - изначально false, функция установки флага
     const [editing, setEditing] = useState(false)
 
-    // начальное значение для формы редактирования
-    // так как мы не знаем, кто редактируется - пустые поля
     const initialFormState = { id: null, text: '', dateCreate: '', dateEnd: '' }
-    // значение "текущий пользователь на редактировании" + функция установки этого значения
     const [currentNote, setCurrentNote] = useState(initialFormState)
 
     const addNote = note => {
@@ -37,12 +35,9 @@ const App = () => {
         if (notes.length > 0) {
             note.id = notes[notes.length - 1].id + 1
         } else note.id = 1
-        // вызываем setUsers определенную выше в хуке useState
-        // передаем туда все, что было в users + новый элемент user
-        // setNotes([...notes, note]) лишний код
 
         let now = new Date()
-        note.dateCreate = `${now.getFullYear()}-${now.getMonth() + 1 < 10 ? '0' + (now.getMonth() + 1): now.getMonth() + 1}-${now.getDate() < 10 ? '0' + now.getDate() : now.getDate()}`
+        note.dateCreate = `${now.getFullYear()}-${now.getMonth() + 1 < 10 ? '0' + (now.getMonth() + 1) : now.getMonth() + 1}-${now.getDate() < 10 ? '0' + now.getDate() : now.getDate()}`
 
         db.collection("notesData").doc(`${note.id}`).set({
             id: note.id,
@@ -52,21 +47,14 @@ const App = () => {
         })
     }
 
-    // удаление пользователя
-    // в очередной раз вызываем setUsers [1]
-    // и передаем в setUsers массив без элемента, который нужно удалить
-
     const deleteNote = id => {
         setEditing(false)
         setNotes(notes.filter(note => note.id !== id))
         db.collection("notesData").doc(`${id}`).delete()
     }
 
-    // обновление пользователя
     const updateNote = (id, updatedNote) => {
-        // когда мы готовы обновить пользователя, ставим флажок editing в false
         setEditing(false)
-        // и обновляем пользователя, если нашли его по id
         setNotes(notes.map(note => (note.id === id ? updatedNote : note)))
         db.collection("notesData").doc(`${id}`).update({
             id: updatedNote.id,
@@ -76,13 +64,21 @@ const App = () => {
         })
     }
 
-    // редактирование пользователя
     const editRow = note => {
-        // готовы редактировать - флажок в true
         setEditing(true)
-        // устанавливаем значения полей для формы редактирования
-        // на основании выбранного "юзера"
         setCurrentNote({ id: note.id, text: note.text, dateCreate: note.dateCreate, dateEnd: note.dateEnd })
+    }
+
+    // Сортировка
+    const [sortConfig, setSortConfig] = useState({ sort: 'asc', sortField: 'dateCreate' })
+
+    const onSort = sortField => {
+        const cloneData = notes.concat()
+        const sortType = sortConfig.sort === 'asc' ? 'desc' : 'asc'
+        const orderedData = _.orderBy(cloneData, sortField, sortType)
+
+        setNotes(orderedData)
+        setSortConfig({ sort: sortType, sortField })
     }
 
     return (
@@ -96,14 +92,21 @@ const App = () => {
             />
             <Route exact path="/edit-note" render={() =>
                 <EditNoteForm
-                                editing={editing}
-                                setEditing={setEditing}
-                                currentNote={currentNote}
-                                updateNote={updateNote}
+                    editing={editing}
+                    setEditing={setEditing}
+                    currentNote={currentNote}
+                    updateNote={updateNote}
                 />}
             />
             <Route exact path="/" render={() =>
-                <NoteTable notes={notes} deleteNote={deleteNote} editRow={editRow} />}
+                <NoteTable
+                    notes={notes}
+                    deleteNote={deleteNote}
+                    editRow={editRow}
+                    onSort={onSort}
+                    sort={sortConfig.sort}
+                    sortField={sortConfig.sortField}
+                />}
             />
         </div>
     )
