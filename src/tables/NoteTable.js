@@ -22,7 +22,7 @@ const NoteTable = props => {
         }
     }
 
-    // Поиск
+    // Поиск/фильтр
 
     const [searchString, setSearchString] = useState('')
     const [filteredTable, setFilteredTable] = useState(props.notes)
